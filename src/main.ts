@@ -54,6 +54,7 @@ let currentLine: Array<{ x: number; y: number }> | null = null;
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
   currentLine = [{ x: e.offsetX, y: e.offsetY }];
+  redoStack.length = 0;
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -115,4 +116,37 @@ clearButton.addEventListener("click", () => {
   displayList.length = 0;
   currentLine = null;
   canvas.dispatchEvent(new Event("drawing-changed"));
+});
+
+// Redo stack
+const redoStack: Array<Array<{ x: number; y: number }>> = [];
+
+// Undo button
+const undoButton = document.createElement("button");
+undoButton.textContent = "Undo";
+document.body.appendChild(undoButton);
+
+undoButton.addEventListener("click", () => {
+  if (displayList.length > 0) {
+    const lastLine = displayList.pop();
+    if (lastLine) {
+      redoStack.push(lastLine);
+    }
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
+
+// Redo button
+const redoButton = document.createElement("button");
+redoButton.textContent = "Redo";
+document.body.appendChild(redoButton);
+
+redoButton.addEventListener("click", () => {
+  if (redoStack.length > 0) {
+    const line = redoStack.pop();
+    if (line) {
+      displayList.push(line);
+    }
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
 });
