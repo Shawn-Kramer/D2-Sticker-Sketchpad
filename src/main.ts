@@ -25,6 +25,7 @@ let isDrawing = false;
 // Data structures
 const displayList: Displayable[] = [];
 let currentLine: MarkerLine | null = null;
+let toolPreview: ToolPreview | null = null;
 
 // Remove direct drawing from mouse events, replace with:
 canvas.addEventListener("mousedown", (e) => {
@@ -36,6 +37,7 @@ canvas.addEventListener("mousedown", (e) => {
 canvas.addEventListener("mousemove", (e) => {
   if (!isDrawing || !currentLine) return;
   currentLine.drag(e.offsetX, e.offsetY);
+  toolPreview = null;
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
@@ -55,6 +57,41 @@ canvas.addEventListener("mouseleave", () => {
   isDrawing = false;
 });
 
+// Preview
+canvas.addEventListener("mousemove", (e) => {
+  if (!isDrawing) {
+    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+    canvas.dispatchEvent(new Event("tool-moved"));
+  }
+});
+
+// Clear preview
+canvas.addEventListener("mouseout", () => {
+  toolPreview = null;
+  canvas.dispatchEvent(new Event("tool-moved"));
+});
+
+// Tool moved observer
+canvas.addEventListener("tool-moved", () => {
+  // Redraw everything
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw all commands
+  for (const command of displayList) {
+    command.display(ctx);
+  }
+
+  // Draw current line if exists
+  if (currentLine) {
+    currentLine.display(ctx);
+  }
+
+  // Draw tool preview if exists
+  if (toolPreview) {
+    toolPreview.display(ctx);
+  }
+});
+
 // Observer for drawing-changed event
 canvas.addEventListener("drawing-changed", () => {
   // Clear canvas
@@ -68,6 +105,10 @@ canvas.addEventListener("drawing-changed", () => {
   // Draw current line if exists
   if (currentLine) {
     currentLine.display(ctx);
+  }
+
+  if (toolPreview) {
+    toolPreview.display(ctx);
   }
 });
 
@@ -168,3 +209,28 @@ class MarkerLine implements Displayable {
 }
 
 let currentThickness = 2;
+
+class ToolPreview implements Displayable {
+  private x: number;
+  private y: number;
+  private thickness: number;
+
+  constructor(x: number, y: number, thickness: number) {
+    this.x = x;
+    this.y = y;
+    this.thickness = thickness;
+  }
+
+  updatePosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.fill();
+    ctx.fillStyle = "black"; // Reset to default
+  }
+}
