@@ -1,9 +1,8 @@
-import exampleIconUrl from "./noun-paperclip-7598668-00449F.png";
 import "./style.css";
 
-document.body.innerHTML = `
-  <p>Example image asset: <img src="${exampleIconUrl}" class="icon" /></p>
-`;
+interface Displayable {
+  display(ctx: CanvasRenderingContext2D): void;
+}
 
 // App title
 const appTitle = document.createElement("h1");
@@ -23,43 +22,20 @@ if (!ctx) throw new Error("Could not get canvas context");
 // Track drawing state
 let isDrawing = false;
 
-/*
-// Mouse event handlers
-canvas.addEventListener("mousedown", (e) => {
-  isDrawing = true;
-  ctx.beginPath();
-  ctx.moveTo(e.offsetX, e.offsetY);
-});
-
-canvas.addEventListener("mousemove", (e) => {
-  if (!isDrawing) return;
-  ctx.lineTo(e.offsetX, e.offsetY);
-  ctx.stroke();
-});
-
-canvas.addEventListener("mouseup", () => {
-  isDrawing = false;
-});
-
-canvas.addEventListener("mouseleave", () => {
-  isDrawing = false;
-});
-*/
-
 // Data structures
-const displayList: Array<Array<{ x: number; y: number }>> = [];
-let currentLine: Array<{ x: number; y: number }> | null = null;
+const displayList: Displayable[] = [];
+let currentLine: MarkerLine | null = null;
 
 // Remove direct drawing from mouse events, replace with:
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentLine = [{ x: e.offsetX, y: e.offsetY }];
+  currentLine = new MarkerLine(e.offsetX, e.offsetY);
   redoStack.length = 0;
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (!isDrawing || !currentLine) return;
-  currentLine.push({ x: e.offsetX, y: e.offsetY });
+  currentLine.drag(e.offsetX, e.offsetY);
   canvas.dispatchEvent(new Event("drawing-changed"));
 });
 
@@ -85,25 +61,13 @@ canvas.addEventListener("drawing-changed", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Redraw all lines from display list
-  for (const line of displayList) {
-    if (line.length > 0) {
-      ctx.beginPath();
-      ctx.moveTo(line[0].x, line[0].y);
-      for (let i = 1; i < line.length; i++) {
-        ctx.lineTo(line[i].x, line[i].y);
-      }
-      ctx.stroke();
-    }
+  for (const command of displayList) {
+    command.display(ctx);
   }
 
   // Draw current line if exists
-  if (currentLine && currentLine.length > 0) {
-    ctx.beginPath();
-    ctx.moveTo(currentLine[0].x, currentLine[0].y);
-    for (let i = 1; i < currentLine.length; i++) {
-      ctx.lineTo(currentLine[i].x, currentLine[i].y);
-    }
-    ctx.stroke();
+  if (currentLine) {
+    currentLine.display(ctx);
   }
 });
 
@@ -119,7 +83,7 @@ clearButton.addEventListener("click", () => {
 });
 
 // Redo stack
-const redoStack: Array<Array<{ x: number; y: number }>> = [];
+const redoStack: Displayable[] = [];
 
 // Undo button
 const undoButton = document.createElement("button");
@@ -150,3 +114,26 @@ redoButton.addEventListener("click", () => {
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
 });
+
+class MarkerLine implements Displayable {
+  private points: Array<{ x: number; y: number }> = [];
+
+  constructor(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    if (this.points.length < 1) return;
+
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length; i++) {
+      ctx.lineTo(this.points[i].x, this.points[i].y);
+    }
+    ctx.stroke();
+  }
+}
