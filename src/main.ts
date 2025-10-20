@@ -29,7 +29,7 @@ let currentLine: MarkerLine | null = null;
 // Remove direct drawing from mouse events, replace with:
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentLine = new MarkerLine(e.offsetX, e.offsetY);
+  currentLine = new MarkerLine(e.offsetX, e.offsetY, currentThickness);
   redoStack.length = 0;
 });
 
@@ -115,11 +115,38 @@ redoButton.addEventListener("click", () => {
   }
 });
 
+// Thin marker button
+const thinButton = document.createElement("button");
+thinButton.textContent = "Thin";
+document.body.appendChild(thinButton);
+
+thinButton.addEventListener("click", () => {
+  currentThickness = 2;
+  thinButton.classList.add("selectedTool");
+  thickButton.classList.remove("selectedTool");
+});
+
+// Thick marker button
+const thickButton = document.createElement("button");
+thickButton.textContent = "Thick";
+document.body.appendChild(thickButton);
+
+thickButton.addEventListener("click", () => {
+  currentThickness = 6;
+  thickButton.classList.add("selectedTool");
+  thinButton.classList.remove("selectedTool");
+});
+
+// Thin marker initially selected
+thinButton.classList.add("selectedTool");
+
 class MarkerLine implements Displayable {
   private points: Array<{ x: number; y: number }> = [];
+  private thickness: number;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, thickness: number) {
     this.points.push({ x, y });
+    this.thickness = thickness;
   }
 
   drag(x: number, y: number) {
@@ -129,11 +156,15 @@ class MarkerLine implements Displayable {
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length < 1) return;
 
+    ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
     for (let i = 1; i < this.points.length; i++) {
       ctx.lineTo(this.points[i].x, this.points[i].y);
     }
     ctx.stroke();
+    ctx.lineWidth = 1;
   }
 }
+
+let currentThickness = 2;
