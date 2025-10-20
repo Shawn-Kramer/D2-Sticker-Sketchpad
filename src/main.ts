@@ -4,6 +4,10 @@ interface Displayable {
   display(ctx: CanvasRenderingContext2D): void;
 }
 
+interface Draggable {
+  drag(x: number, y: number): void;
+}
+
 // App title
 const appTitle = document.createElement("h1");
 appTitle.textContent = "Sticker Sketchpad";
@@ -24,14 +28,18 @@ let isDrawing = false;
 
 // Data structures
 const displayList: Displayable[] = [];
-let currentLine: MarkerLine | null = null;
-let toolPreview: ToolPreview | null = null;
+let currentLine: Displayable & Draggable | null = null;
+let toolPreview: Displayable | null = null;
 
 // Remove direct drawing from mouse events, replace with:
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  currentLine = new MarkerLine(e.offsetX, e.offsetY, currentThickness);
   redoStack.length = 0;
+  if (currentTool === "marker") {
+    currentLine = new MarkerLine(e.offsetX, e.offsetY, currentThickness);
+  } else {
+    currentLine = new Sticker(e.offsetX, e.offsetY, currentEmoji);
+  }
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -60,7 +68,11 @@ canvas.addEventListener("mouseleave", () => {
 // Preview
 canvas.addEventListener("mousemove", (e) => {
   if (!isDrawing) {
-    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+    if (currentTool === "marker") {
+      toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+    } else {
+      toolPreview = new StickerPreview(e.offsetX, e.offsetY, currentEmoji);
+    }
     canvas.dispatchEvent(new Event("tool-moved"));
   }
 });
@@ -162,9 +174,15 @@ thinButton.textContent = "Thin";
 document.body.appendChild(thinButton);
 
 thinButton.addEventListener("click", () => {
+  currentTool = "marker";
   currentThickness = 2;
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
+  document.querySelectorAll("button").forEach((btn) => {
+    if (stickers.includes(btn.textContent || "")) {
+      btn.classList.remove("selectedTool");
+    }
+  });
 });
 
 // Thick marker button
@@ -173,13 +191,47 @@ thickButton.textContent = "Thick";
 document.body.appendChild(thickButton);
 
 thickButton.addEventListener("click", () => {
+  currentTool = "marker";
   currentThickness = 6;
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
+  document.querySelectorAll("button").forEach((btn) => {
+    if (stickers.includes(btn.textContent || "")) {
+      btn.classList.remove("selectedTool");
+    }
+  });
 });
 
 // Thin marker initially selected
 thinButton.classList.add("selectedTool");
+
+// Sticker buttons
+const stickers = ["😀", "🌟", "❤️"];
+
+stickers.forEach((emoji) => {
+  const stickerButton = document.createElement("button");
+  stickerButton.textContent = emoji;
+  document.body.appendChild(stickerButton);
+
+  stickerButton.addEventListener("click", () => {
+    currentTool = "sticker";
+    currentEmoji = emoji;
+
+    // Remove selected class from all buttons
+    thinButton.classList.remove("selectedTool");
+    thickButton.classList.remove("selectedTool");
+    document.querySelectorAll("button").forEach((btn) => {
+      if (stickers.includes(btn.textContent || "")) {
+        btn.classList.remove("selectedTool");
+      }
+    });
+
+    // Add selected class to this button
+    stickerButton.classList.add("selectedTool");
+
+    canvas.dispatchEvent(new Event("tool-moved"));
+  });
+});
 
 class MarkerLine implements Displayable {
   private points: Array<{ x: number; y: number }> = [];
@@ -208,7 +260,9 @@ class MarkerLine implements Displayable {
   }
 }
 
+let currentTool: "marker" | "sticker" = "marker";
 let currentThickness = 2;
+let currentEmoji = "😀";
 
 class ToolPreview implements Displayable {
   private x: number;
@@ -232,5 +286,53 @@ class ToolPreview implements Displayable {
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     ctx.fill();
     ctx.fillStyle = "black"; // Reset to default
+  }
+}
+
+class StickerPreview implements Displayable {
+  private x: number;
+  private y: number;
+  private emoji: string;
+
+  constructor(x: number, y: number, emoji: string) {
+    this.x = x;
+    this.y = y;
+    this.emoji = emoji;
+  }
+
+  updatePosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = "32px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
+class Sticker implements Displayable {
+  private x: number;
+  private y: number;
+  private emoji: string;
+
+  constructor(x: number, y: number, emoji: string) {
+    this.x = x;
+    this.y = y;
+    this.emoji = emoji;
+  }
+
+  drag(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = "32px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.emoji, this.x, this.y);
   }
 }
