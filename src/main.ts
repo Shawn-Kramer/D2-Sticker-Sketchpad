@@ -178,7 +178,7 @@ document.body.appendChild(thinButton);
 
 thinButton.addEventListener("click", () => {
   currentTool = "marker";
-  currentThickness = 2;
+  currentThickness = 3;
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
   document.querySelectorAll("button").forEach((btn) => {
@@ -195,7 +195,7 @@ document.body.appendChild(thickButton);
 
 thickButton.addEventListener("click", () => {
   currentTool = "marker";
-  currentThickness = 6;
+  currentThickness = 8;
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
   document.querySelectorAll("button").forEach((btn) => {
@@ -308,7 +308,7 @@ class MarkerLine implements Displayable {
 }
 
 let currentTool: "marker" | "sticker" = "marker";
-let currentThickness = 2;
+let currentThickness = 3;
 let currentEmoji = "😀";
 
 class ToolPreview implements Displayable {
@@ -353,7 +353,7 @@ class StickerPreview implements Displayable {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    ctx.font = "32px monospace";
+    ctx.font = "40px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(this.emoji, this.x, this.y);
@@ -377,7 +377,7 @@ class Sticker implements Displayable {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    ctx.font = "32px monospace";
+    ctx.font = "40px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(this.emoji, this.x, this.y);
