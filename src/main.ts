@@ -383,3 +383,32 @@ class Sticker implements Displayable {
     ctx.fillText(this.emoji, this.x, this.y);
   }
 }
+
+// Export button
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export";
+document.body.appendChild(exportButton);
+
+exportButton.addEventListener("click", () => {
+  // Create high-res canvas
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  
+  const exportCtx = exportCanvas.getContext("2d");
+  if (!exportCtx) return;
+  
+  // Scale up 4x (1024/256 = 4)
+  exportCtx.scale(4, 4);
+  
+  // Draw all commands from display list
+  for (const command of displayList) {
+    command.display(exportCtx);
+  }
+  
+  // Trigger download
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
