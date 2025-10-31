@@ -39,7 +39,12 @@ canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
   redoStack.length = 0;
   if (currentTool === "marker") {
-    currentLine = new MarkerLine(e.offsetX, e.offsetY, currentThickness);
+    currentLine = new MarkerLine(
+      e.offsetX,
+      e.offsetY,
+      currentThickness,
+      currentColor,
+    );
   } else {
     currentLine = new Sticker(e.offsetX, e.offsetY, currentEmoji);
   }
@@ -72,7 +77,12 @@ canvas.addEventListener("mouseleave", () => {
 canvas.addEventListener("mousemove", (e) => {
   if (!isDrawing) {
     if (currentTool === "marker") {
-      toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+      toolPreview = new ToolPreview(
+        e.offsetX,
+        e.offsetY,
+        currentThickness,
+        currentColor,
+      );
     } else {
       toolPreview = new StickerPreview(e.offsetX, e.offsetY, currentEmoji);
     }
@@ -179,6 +189,7 @@ document.body.appendChild(thinButton);
 thinButton.addEventListener("click", () => {
   currentTool = "marker";
   currentThickness = 3;
+  currentColor = getRandomColor();
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
   document.querySelectorAll("button").forEach((btn) => {
@@ -186,6 +197,7 @@ thinButton.addEventListener("click", () => {
       btn.classList.remove("selectedTool");
     }
   });
+  canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 // Thick marker button
@@ -196,6 +208,7 @@ document.body.appendChild(thickButton);
 thickButton.addEventListener("click", () => {
   currentTool = "marker";
   currentThickness = 8;
+  currentColor = getRandomColor();
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
   document.querySelectorAll("button").forEach((btn) => {
@@ -203,6 +216,7 @@ thickButton.addEventListener("click", () => {
       btn.classList.remove("selectedTool");
     }
   });
+  canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 // Thin marker initially selected
@@ -280,13 +294,22 @@ stickers.forEach((emoji) => {
 });
 */
 
-class MarkerLine implements Displayable {
+let currentColor = "#000000";
+
+function getRandomColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
+class MarkerLine implements Displayable, Draggable {
   private points: Array<{ x: number; y: number }> = [];
   private thickness: number;
+  private color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.points.push({ x, y });
     this.thickness = thickness;
+    this.color = color;
   }
 
   drag(x: number, y: number) {
@@ -296,6 +319,7 @@ class MarkerLine implements Displayable {
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length < 1) return;
 
+    ctx.strokeStyle = this.color;
     ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.moveTo(this.points[0].x, this.points[0].y);
@@ -303,6 +327,7 @@ class MarkerLine implements Displayable {
       ctx.lineTo(this.points[i].x, this.points[i].y);
     }
     ctx.stroke();
+    ctx.strokeStyle = "black";
     ctx.lineWidth = 1;
   }
 }
@@ -315,11 +340,13 @@ class ToolPreview implements Displayable {
   private x: number;
   private y: number;
   private thickness: number;
+  private color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.x = x;
     this.y = y;
     this.thickness = thickness;
+    this.color = color;
   }
 
   updatePosition(x: number, y: number) {
@@ -330,9 +357,10 @@ class ToolPreview implements Displayable {
   display(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = 0.5;
     ctx.fill();
-    ctx.fillStyle = "black"; // Reset to default
+    ctx.globalAlpha = 1.0;
   }
 }
 
@@ -360,7 +388,7 @@ class StickerPreview implements Displayable {
   }
 }
 
-class Sticker implements Displayable {
+class Sticker implements Displayable, Draggable {
   private x: number;
   private y: number;
   private emoji: string;
