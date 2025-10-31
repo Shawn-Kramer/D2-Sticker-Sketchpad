@@ -31,6 +31,9 @@ const displayList: Displayable[] = [];
 let currentLine: Displayable & Draggable | null = null;
 let toolPreview: Displayable | null = null;
 
+// Sticker buttons
+const stickers = ["😀", "🌟", "❤️"];
+
 // Remove direct drawing from mouse events, replace with:
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
@@ -205,9 +208,52 @@ thickButton.addEventListener("click", () => {
 // Thin marker initially selected
 thinButton.classList.add("selectedTool");
 
-// Sticker buttons
-const stickers = ["😀", "🌟", "❤️"];
+// Create a sticker button
+function createStickerButton(emoji: string) {
+  const stickerButton = document.createElement("button");
+  stickerButton.textContent = emoji;
+  document.body.appendChild(stickerButton);
 
+  stickerButton.addEventListener("click", () => {
+    currentTool = "sticker";
+    currentEmoji = emoji;
+
+    // Remove selected class from all buttons
+    thinButton.classList.remove("selectedTool");
+    thickButton.classList.remove("selectedTool");
+    document.querySelectorAll("button").forEach((btn) => {
+      if (stickers.includes(btn.textContent || "")) {
+        btn.classList.remove("selectedTool");
+      }
+    });
+
+    // Add selected class to this button
+    stickerButton.classList.add("selectedTool");
+
+    canvas.dispatchEvent(new Event("tool-moved"));
+  });
+
+  return stickerButton;
+}
+
+// Create initial sticker buttons
+stickers.forEach((emoji) => {
+  createStickerButton(emoji);
+});
+
+// Custom sticker button
+const customStickerButton = document.createElement("button");
+customStickerButton.textContent = "Custom Sticker";
+document.body.appendChild(customStickerButton);
+
+customStickerButton.addEventListener("click", () => {
+  const customText = prompt("Custom sticker text", "🧽");
+  if (customText) {
+    stickers.push(customText);
+    createStickerButton(customText);
+  }
+});
+/*
 stickers.forEach((emoji) => {
   const stickerButton = document.createElement("button");
   stickerButton.textContent = emoji;
@@ -232,6 +278,7 @@ stickers.forEach((emoji) => {
     canvas.dispatchEvent(new Event("tool-moved"));
   });
 });
+*/
 
 class MarkerLine implements Displayable {
   private points: Array<{ x: number; y: number }> = [];
